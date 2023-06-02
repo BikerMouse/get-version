@@ -1,0 +1,26 @@
+name: 'Get Version'
+description: 'Get the version from branch/tag name'
+branding:
+  color: green
+  icon: git-branch
+outputs:
+  version:
+    description: "version"
+    value: ${{ steps.get-version.outputs.results }}
+runs:
+  using: "composite"
+  steps:
+    - id: get-version
+      run: |
+        ref_name=${GITHUB_REF_NAME}
+        ref_type=${GITHUB_REF_TYPE}
+        echo "ref name    => $ref_name"
+        echo "ref type    => $ref_type"
+        if [[ $ref_name =~ [0-9]+(\\.[0-9]+)* ]];
+        then
+          echo "version=$(echo $ref_name)" >> $GITHUB_OUTPUT
+        else
+          echo "$ref_type $ref_name has invalid format"
+          exit 1
+        fi
+      shell: bash
