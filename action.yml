@@ -6,7 +6,7 @@ branding:
 outputs:
   version:
     description: "version"
-    value: ${{ steps.get-version.outputs.results }}
+    value: ${{ steps.get-version.outputs.version }}
 runs:
   using: "composite"
   steps:
