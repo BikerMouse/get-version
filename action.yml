@@ -1,12 +1,33 @@
 name: 'Get Version'
 description: 'Get the version from branch/tag name'
+
 branding:
   color: green
   icon: git-branch
+
 outputs:
   version:
-    description: "version"
+    description: "Full version without 'v' prefix"
     value: ${{ steps.get-version.outputs.version }}
+  version-with-prefix:
+    description: "Full version with 'v' prefix"
+    value: ${{ steps.get-version.outputs.version-prefix }}
+  major:
+    description: "Major version"
+    value: ${{ steps.get-version.outputs.major }}
+  minor:
+    description: "Minor version"
+    value: ${{ steps.get-version.outputs.minor }}
+  patch:
+    description: "Patch of the version"
+    value: ${{ steps.get-version.outputs.patch }}
+  prerelease:
+    description: "If available, label of the pre-release"
+    value: ${{ steps.get-version.outputs.prerelease }}
+  metadata:
+    description: "If available, label of the metadata/build information"
+    value: ${{ steps.get-version.outputs.metadata }}
+    
 runs:
   using: "composite"
   steps:
@@ -14,11 +35,40 @@ runs:
       run: |
         ref_name=${GITHUB_REF_NAME}
         ref_type=${GITHUB_REF_TYPE}
+        semver_regex="^([Vv]?)(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))?)?(-([0-9A-Za-z.-]+))?(\+([0-9A-Za-z.-]+))?$"
+
         echo "ref name    => $ref_name"
         echo "ref type    => $ref_type"
-        if [[ $ref_name =~ [0-9]+(\\.[0-9]+)* ]];
+        
+        if [[ $ref_name =~ $semver_regex ]];
         then
-          echo "version=$(echo $ref_name)" >> $GITHUB_OUTPUT
+          prefix="${BASH_REMATCH[1]}"
+          major="${BASH_REMATCH[2]}"
+          minor="${BASH_REMATCH[4]}"
+          patch="${BASH_REMATCH[6]}"
+          prerelease="${BASH_REMATCH[8]}"
+          meta="${BASH_REMATCH[10]}"
+          
+          version="$major.${minor:-0}.${patch:-0}"
+          if [ -n "$prerelease" ];
+          then
+            version+="-$prerelease"
+          fi
+
+          echo "version=$(echo $version)" >> $GITHUB_OUTPUT
+          echo "version-prefix=$(echo v$version)" >> $GITHUB_OUTPUT
+          echo "major=$(echo $major)" >> $GITHUB_OUTPUT
+          echo "minor=$(echo ${minor:-0})" >> $GITHUB_OUTPUT
+          echo "patch=$(echo ${patch:-0})" >> $GITHUB_OUTPUT
+          echo "prerelease=$(echo ${prerelease:-})" >> $GITHUB_OUTPUT
+          echo "metadata=$(echo ${meta:-})" >> $GITHUB_OUTPUT
+
+          echo "Valid version found: ${prefix:-}$version"
+          echo "Major: $major"
+          echo "Minor: ${minor:-0}"
+          echo "Patch: ${patch:-0}"
+          if [ -n "$prerelease" ]; then echo "Pre-release: $prerelease"; fi
+          if [ -n "$meta" ]; then echo "Metadata: $meta"; fi
         else
           echo "$ref_type $ref_name has invalid format"
           exit 1
